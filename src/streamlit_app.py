@@ -64,6 +64,19 @@ def fetch_user_threads_cached(
     return client.get_user_threads(user_id=user_id, agent=agent_id, limit=limit)
 
 
+def start_new_chat() -> None:
+    """Reset the UI state for a new conversation."""
+    st.session_state.messages = []
+    st.session_state.thread_id = str(uuid.uuid4())
+    st.session_state.pop("last_audio", None)
+
+
+def handle_agent_change() -> None:
+    """Start a new conversation when the selected agent changes."""
+    fetch_user_threads_cached.clear()
+    start_new_chat()
+
+
 async def main() -> None:
     st.set_page_config(
         page_title=APP_TITLE,
@@ -143,11 +156,7 @@ async def main() -> None:
         ""
 
         if st.button(":material/chat: New Chat", use_container_width=True):
-            st.session_state.messages = []
-            st.session_state.thread_id = str(uuid.uuid4())
-            # Clear saved audio when starting new chat
-            if "last_audio" in st.session_state:
-                del st.session_state.last_audio
+            start_new_chat()
             st.rerun()
 
         with st.expander(":material/history: Previous Chats", expanded=False):
@@ -197,7 +206,7 @@ async def main() -> None:
                 index=agent_idx,
                 key="agent",
                 bind="query-params",
-                on_change=fetch_user_threads_cached.clear,
+                on_change=handle_agent_change,
             )
             use_streaming = st.toggle("Stream results", value=True)
             # Audio toggle with callback: clears cached audio when toggled off

@@ -196,6 +196,19 @@ def test_app_new_chat_btn(mock_agent_client):
     assert not at.exception
 
 
+def test_app_agent_change_starts_new_chat(mock_agent_client):
+    """Changing agents starts a separate conversation."""
+    at = AppTest.from_file("../../src/streamlit_app.py").run()
+    original_thread_id = at.session_state.thread_id
+
+    at.sidebar.selectbox[1].set_value("chatbot").run()
+
+    assert at.session_state.thread_id != original_thread_id
+    assert at.session_state.messages == []
+    assert mock_agent_client.agent == "chatbot"
+    assert not at.exception
+
+
 @pytest.fixture
 def multi_agent_messages():
     """Fixture providing reusable messages for multi-agent tests"""
