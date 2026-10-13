@@ -82,6 +82,8 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: SecretStr | None = None
     DEEPSEEK_API_KEY: SecretStr | None = None
+    DEEPSEEK_TIMEOUT_SECONDS: float = Field(default=60, gt=0)
+    DEEPSEEK_MAX_RETRIES: int = Field(default=2, ge=0)
     ANTHROPIC_API_KEY: SecretStr | None = None
     GOOGLE_API_KEY: SecretStr | None = None
     GOOGLE_APPLICATION_CREDENTIALS: SecretStr | None = None

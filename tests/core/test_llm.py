@@ -86,11 +86,17 @@ def test_get_model_ollama():
 _get_model_uncached = get_model.__wrapped__
 
 
-def test_get_model_deepseek_disables_thinking():
-    with patch("core.settings.settings.DEEPSEEK_API_KEY", SecretStr("test_key")):
+def test_get_model_deepseek_configuration():
+    with (
+        patch("core.settings.settings.DEEPSEEK_API_KEY", SecretStr("test_key")),
+        patch("core.settings.settings.DEEPSEEK_TIMEOUT_SECONDS", 45),
+        patch("core.settings.settings.DEEPSEEK_MAX_RETRIES", 4),
+    ):
         model = _get_model_uncached(DeepseekModelName.DEEPSEEK_V4_FLASH)
         assert isinstance(model, ChatOpenAI)
         assert model.extra_body == {"thinking": {"type": "disabled"}}
+        assert model.request_timeout == 45
+        assert model.max_retries == 4
 
 
 def test_get_model_openrouter():

@@ -104,6 +104,8 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
             streaming=True,
             openai_api_base="https://api.deepseek.com",
             openai_api_key=settings.DEEPSEEK_API_KEY,
+            timeout=settings.DEEPSEEK_TIMEOUT_SECONDS,
+            max_retries=settings.DEEPSEEK_MAX_RETRIES,
             # ChatOpenAI does not preserve DeepSeek's non-standard
             # reasoning_content field between tool-calling requests. Disable
             # thinking mode so multi-step agents can safely replay messages.
