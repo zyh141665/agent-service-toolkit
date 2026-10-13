@@ -1,5 +1,6 @@
 import math
 import re
+from datetime import datetime
 
 import numexpr
 from langchain_chroma import Chroma
@@ -40,6 +41,15 @@ def calculator_func(expression: str) -> str:
 
 calculator: BaseTool = tool(calculator_func)
 calculator.name = "Calculator"
+
+
+def current_datetime_func() -> str:
+    """返回当前本地日期和时间。"""
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+current_datetime: BaseTool = tool(current_datetime_func)
+current_datetime.name = "Current_DateTime"
 
 
 # Format retrieved documents

@@ -11,7 +11,7 @@ from langgraph.managed import RemainingSteps
 from langgraph.prebuilt import ToolNode
 
 from agents.safeguard import Safeguard, SafeguardOutput, SafetyAssessment
-from agents.tools import calculator
+from agents.tools import calculator, current_datetime
 from core import get_model, settings
 
 
@@ -26,7 +26,7 @@ class AgentState(MessagesState, total=False):
 
 
 web_search = DuckDuckGoSearchResults(name="WebSearch")
-tools = [web_search, calculator]
+tools = [web_search, calculator, current_datetime]
 
 # Add weather tool if API key is set
 # Register for an API key at https://openweathermap.org/api/
