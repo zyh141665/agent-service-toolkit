@@ -45,7 +45,10 @@ def test_unknown_agent_returns_404(test_client, method, path, request_kwargs) ->
         response = getattr(test_client, method)(path, **request_kwargs)
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Agent 'not-a-real-agent' not found"}
+    assert response.json() == {
+        "detail": "Agent 'not-a-real-agent' not found",
+        "request_id": response.headers["X-Request-ID"],
+    }
 
 
 def test_invoke(test_client, mock_agent) -> None:

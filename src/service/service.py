@@ -9,7 +9,8 @@ from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from langchain_core._api import LangChainBetaWarning
@@ -140,6 +141,7 @@ router.include_router(agui_router)
 async def add_request_id(request: Request, call_next):
     """Attach a correlation ID to every response and request log."""
     request_id = str(uuid4())
+    request.state.request_id = request_id
     started_at = time.perf_counter()
 
     try:
@@ -165,6 +167,15 @@ async def add_request_id(request: Request, call_next):
         elapsed_ms,
     )
     return response
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_with_request_id(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=jsonable_encoder({"detail": exc.detail, "request_id": request.state.request_id}),
+        headers=exc.headers,
+    )
 
 
 @router.get("/info")
