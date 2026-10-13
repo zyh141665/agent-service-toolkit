@@ -11,6 +11,30 @@ from schema import ChatHistory, ChatMessage, ServiceMetadata
 from schema.models import AnthropicModelName, OpenAIModelName
 
 
+@pytest.mark.parametrize(
+    ("method", "path", "request_kwargs"),
+    [
+        ("post", "/not-a-real-agent/invoke", {"json": {"message": "hello"}}),
+        ("post", "/not-a-real-agent/stream", {"json": {"message": "hello"}}),
+        (
+            "post",
+            "/not-a-real-agent/history",
+            {"json": {"thread_id": "7bcc7cc1-99d7-4b1d-bdb5-e6f90ed44de6"}},
+        ),
+        ("get", "/not-a-real-agent/threads", {"params": {"user_id": "user-1"}}),
+    ],
+)
+def test_unknown_agent_returns_404(test_client, method, path, request_kwargs) -> None:
+    with (
+        patch("service.service.settings.AUTH_SECRET", None),
+        patch("service.service.get_agent", side_effect=KeyError("not-a-real-agent")),
+    ):
+        response = getattr(test_client, method)(path, **request_kwargs)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Agent 'not-a-real-agent' not found"}
+
+
 def test_invoke(test_client, mock_agent) -> None:
     QUESTION = "What is the weather in Tokyo?"
     ANSWER = "The weather in Tokyo is 70 degrees."

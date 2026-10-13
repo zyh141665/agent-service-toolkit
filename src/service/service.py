@@ -57,6 +57,17 @@ warnings.filterwarnings("ignore", category=LangChainBetaWarning)
 logger = logging.getLogger(__name__)
 
 
+def _get_agent_or_404(agent_id: str) -> AgentGraph:
+    """Return the requested agent or raise an HTTP-friendly not-found error."""
+    try:
+        return get_agent(agent_id)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent '{agent_id}' not found",
+        ) from exc
+
+
 def custom_generate_unique_id(route: APIRoute) -> str:
     """Generate idiomatic operation IDs for OpenAPI client generation."""
     return route.name
@@ -214,7 +225,7 @@ async def invoke(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> ChatMe
     # in interrupt-agent, or a tool step in research-assistant), it's omitted. Arguably,
     # you'd want to include it. You could update the API to return a list of ChatMessages
     # in that case.
-    agent: AgentGraph = get_agent(agent_id)
+    agent = _get_agent_or_404(agent_id)
     kwargs, run_id = await _handle_input(user_input, agent, agent_id)
 
     try:
@@ -392,6 +403,7 @@ async def stream(user_input: StreamInput, agent_id: str = DEFAULT_AGENT) -> Stre
 
     Set `stream_tokens=false` to return intermediate messages but not token-by-token.
     """
+    _get_agent_or_404(agent_id)
     return StreamingResponse(
         message_generator(user_input, agent_id),
         media_type="text/event-stream",
@@ -426,7 +438,7 @@ async def history(input: ChatHistoryInput, agent_id: str = DEFAULT_AGENT) -> Cha
 
     If agent_id is not provided, the default agent will be used.
     """
-    agent: AgentGraph = get_agent(agent_id)
+    agent = _get_agent_or_404(agent_id)
     config = RunnableConfig(configurable={"thread_id": input.thread_id})
     try:
         messages: list[BaseMessage] = []
@@ -460,7 +472,7 @@ async def threads(
     trust model as /history. Put your own authorization in front of this before end
     users can reach it.
     """
-    agent: AgentGraph = get_agent(agent_id)
+    agent = _get_agent_or_404(agent_id)
     checkpointer = getattr(agent, "checkpointer", None)
     if not checkpointer:
         return UserThreads(threads=[])
