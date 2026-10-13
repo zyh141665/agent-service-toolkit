@@ -311,7 +311,7 @@ async def invoke(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> ChatMe
 
 
 async def message_generator(
-    user_input: StreamInput, agent_id: str = DEFAULT_AGENT
+    user_input: StreamInput, agent_id: str, request_id: str
 ) -> AsyncGenerator[str, None]:
     """
     Generate a stream of messages from the agent.
@@ -391,9 +391,9 @@ async def message_generator(
                 try:
                     chat_message = langchain_to_chat_message(message)
                     chat_message.run_id = str(run_id)
-                except Exception as e:
-                    logger.error(f"Error parsing message: {e}")
-                    yield f"data: {json.dumps({'type': 'error', 'content': 'Unexpected error'})}\n\n"
+                except Exception:
+                    logger.exception("stream_message_parsing_failed | request_id=%s", request_id)
+                    yield f"data: {json.dumps({'type': 'error', 'content': 'Unexpected error', 'request_id': request_id})}\n\n"
                     continue
                 # LangGraph re-sends the input message, which feels weird, so drop it
                 if chat_message.type == "human" and chat_message.content == user_input.message:
@@ -416,9 +416,9 @@ async def message_generator(
                     # that the model is asking for a tool to be invoked.
                     # So we only print non-empty content.
                     yield f"data: {json.dumps({'type': 'token', 'content': convert_message_content_to_string(content)})}\n\n"
-    except Exception as e:
-        logger.error(f"Error in message generator: {e}")
-        yield f"data: {json.dumps({'type': 'error', 'content': 'Internal server error'})}\n\n"
+    except Exception:
+        logger.exception("stream_failed | request_id=%s", request_id)
+        yield f"data: {json.dumps({'type': 'error', 'content': 'Internal server error', 'request_id': request_id})}\n\n"
     finally:
         yield "data: [DONE]\n\n"
 
@@ -451,7 +451,9 @@ def _sse_response_example() -> dict[int | str, Any]:
     operation_id="stream_with_agent_id",
 )
 @router.post("/stream", response_class=StreamingResponse, responses=_sse_response_example())
-async def stream(user_input: StreamInput, agent_id: str = DEFAULT_AGENT) -> StreamingResponse:
+async def stream(
+    user_input: StreamInput, request: Request, agent_id: str = DEFAULT_AGENT
+) -> StreamingResponse:
     """
     Stream an agent's response to a user input, including intermediate messages and tokens.
 
@@ -464,7 +466,7 @@ async def stream(user_input: StreamInput, agent_id: str = DEFAULT_AGENT) -> Stre
     """
     _get_agent_or_404(agent_id)
     return StreamingResponse(
-        message_generator(user_input, agent_id),
+        message_generator(user_input, agent_id, request.state.request_id),
         media_type="text/event-stream",
     )
 

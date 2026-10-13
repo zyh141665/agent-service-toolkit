@@ -30,6 +30,17 @@ def test_init(mock_env):
     assert client.agent == "test-agent"
 
 
+def test_parse_stream_error_raises_with_request_id(agent_client) -> None:
+    event = {
+        "type": "error",
+        "content": "Internal server error",
+        "request_id": "request-123",
+    }
+
+    with pytest.raises(AgentClientError, match="request-123"):
+        agent_client._parse_stream_line(f"data: {json.dumps(event)}")
+
+
 def test_headers(mock_env):
     """Test header generation with and without auth."""
     # Test without auth

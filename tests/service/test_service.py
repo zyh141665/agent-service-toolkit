@@ -459,6 +459,39 @@ async def test_stream_no_tokens(test_client, mock_agent) -> None:
         assert messages[0]["content"]["type"] == "ai"
 
 
+def test_stream_error_includes_request_id(test_client, mock_agent, caplog) -> None:
+    async def failing_stream(**kwargs):
+        raise RuntimeError("model connection failed")
+        yield
+
+    mock_agent.astream = failing_stream
+
+    with (
+        patch("service.service.settings.AUTH_SECRET", None),
+        caplog.at_level(logging.ERROR, logger="service.service"),
+        test_client.stream(
+            "POST", "/stream", json={"message": "hello", "stream_tokens": True}
+        ) as response,
+    ):
+        request_id = response.headers["X-Request-ID"]
+        messages = [
+            json.loads(line.removeprefix("data: "))
+            for line in response.iter_lines()
+            if line and line != "data: [DONE]"
+        ]
+
+    assert response.status_code == 200
+    assert messages == [
+        {
+            "type": "error",
+            "content": "Internal server error",
+            "request_id": request_id,
+        }
+    ]
+    assert request_id in caplog.text
+    assert "RuntimeError: model connection failed" in caplog.text
+
+
 def test_stream_interrupt(test_client, mock_agent) -> None:
     QUESTION = "What is the weather in Tokyo?"
     INTERRUPT = "Confirm weather check"

@@ -197,8 +197,9 @@ class AgentClient:
                     # Yield the str token directly
                     return parsed["content"]
                 case "error":
-                    error_msg = "Error: " + parsed["content"]
-                    return ChatMessage(type="ai", content=error_msg)
+                    request_id = parsed.get("request_id")
+                    request_context = f" (request_id: {request_id})" if request_id else ""
+                    raise AgentClientError(parsed["content"] + request_context)
         return None
 
     def stream(
