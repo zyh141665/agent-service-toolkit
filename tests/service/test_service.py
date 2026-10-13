@@ -1,5 +1,6 @@
 import json
 from unittest.mock import AsyncMock, patch
+from uuid import UUID
 
 import langsmith
 import pytest
@@ -9,6 +10,18 @@ from langgraph.types import Interrupt, StateSnapshot
 from agents.agents import Agent
 from schema import ChatHistory, ChatMessage, ServiceMetadata
 from schema.models import AnthropicModelName, OpenAIModelName
+
+
+def test_response_includes_unique_request_id(test_client) -> None:
+    first_response = test_client.get("/health")
+    second_response = test_client.get("/health")
+
+    first_request_id = first_response.headers["X-Request-ID"]
+    second_request_id = second_response.headers["X-Request-ID"]
+
+    assert str(UUID(first_request_id)) == first_request_id
+    assert str(UUID(second_request_id)) == second_request_id
+    assert first_request_id != second_request_id
 
 
 @pytest.mark.parametrize(

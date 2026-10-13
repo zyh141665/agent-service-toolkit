@@ -1,13 +1,14 @@
 import inspect
 import json
 import logging
+import time
 import warnings
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -133,6 +134,37 @@ app = FastAPI(lifespan=lifespan, generate_unique_id_function=custom_generate_uni
 router = APIRouter(dependencies=[Depends(verify_bearer)])
 # AG-UI protocol endpoints inherit the same bearer auth - see service/agui.py
 router.include_router(agui_router)
+
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    """Attach a correlation ID to every response and request log."""
+    request_id = str(uuid4())
+    started_at = time.perf_counter()
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "http_request_failed | request_id=%s | method=%s | path=%s",
+            request_id,
+            request.method,
+            request.url.path,
+        )
+        raise
+
+    elapsed_ms = (time.perf_counter() - started_at) * 1000
+    response.headers["X-Request-ID"] = request_id
+    logger.info(
+        "http_request_completed | request_id=%s | method=%s | path=%s | "
+        "status=%s | elapsed_ms=%.2f",
+        request_id,
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
 
 
 @router.get("/info")
