@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             # Set up both components
             if hasattr(saver, "setup"):  # ignore: union-attr
                 await saver.setup()
-            # Only setup store for Postgres as InMemoryStore doesn't need setup
+            # Run backend-specific store migrations before agents start using it.
             if hasattr(store, "setup"):  # ignore: union-attr
                 await store.setup()
 

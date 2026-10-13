@@ -39,23 +39,6 @@ def wrap_model(
     return preprocessor | model
 
 
-background_prompt = SystemMessagePromptTemplate.from_template("""
-You are a helpful assistant that tells users there zodiac sign.
-Provide a one sentence summary of the origin of zodiac signs.
-Don't tell the user what their sign is, you are just demonstrating your knowledge on the topic.
-""")
-
-
-async def background(state: AgentState, config: RunnableConfig) -> AgentState:
-    """This node is to demonstrate doing work before the interrupt"""
-
-    m = get_model(config["configurable"].get("model", settings.DEFAULT_MODEL))
-    model_runnable = wrap_model(m, background_prompt.format()).with_config(tags=["skip_stream"])
-    await model_runnable.ainvoke(state, config)
-
-    return {"messages": []}
-
-
 birthdate_extraction_prompt = SystemMessagePromptTemplate.from_template("""
 You are an expert at extracting birthdates from conversational text.
 
@@ -229,12 +212,10 @@ async def generate_response(state: AgentState, config: RunnableConfig) -> AgentS
 
 # Define the graph
 agent = StateGraph(AgentState)
-agent.add_node("background", background)
 agent.add_node("determine_birthdate", determine_birthdate)
 agent.add_node("generate_response", generate_response)
 
-agent.set_entry_point("background")
-agent.add_edge("background", "determine_birthdate")
+agent.set_entry_point("determine_birthdate")
 agent.add_edge("determine_birthdate", "generate_response")
 agent.add_edge("generate_response", END)
 
