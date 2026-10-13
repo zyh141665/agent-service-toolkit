@@ -24,6 +24,17 @@ def test_response_includes_unique_request_id(test_client) -> None:
     assert first_request_id != second_request_id
 
 
+def test_validation_error_includes_request_id(test_client) -> None:
+    with patch("service.service.settings.AUTH_SECRET", None):
+        response = test_client.post("/invoke", json={})
+
+    response_body = response.json()
+
+    assert response.status_code == 422
+    assert response_body["request_id"] == response.headers["X-Request-ID"]
+    assert response_body["detail"][0]["loc"] == ["body", "message"]
+
+
 @pytest.mark.parametrize(
     ("method", "path", "request_kwargs"),
     [

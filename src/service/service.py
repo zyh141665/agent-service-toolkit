@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -175,6 +176,14 @@ async def http_exception_with_request_id(request: Request, exc: HTTPException):
         status_code=exc.status_code,
         content=jsonable_encoder({"detail": exc.detail, "request_id": request.state.request_id}),
         headers=exc.headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_with_request_id(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content=jsonable_encoder({"detail": exc.errors(), "request_id": request.state.request_id}),
     )
 
 
