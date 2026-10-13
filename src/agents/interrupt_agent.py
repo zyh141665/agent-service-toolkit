@@ -7,12 +7,14 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import SystemMessagePromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig, RunnableLambda, RunnableSerializable
+from langchain_openai import ChatOpenAI
 from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
 from core import get_model, settings
+from schema.models import DeepseekModelName
 
 # Added logger
 logger = logging.getLogger(__name__)
@@ -48,10 +50,10 @@ async def background(state: AgentState, config: RunnableConfig) -> AgentState:
     """This node is to demonstrate doing work before the interrupt"""
 
     m = get_model(config["configurable"].get("model", settings.DEFAULT_MODEL))
-    model_runnable = wrap_model(m, background_prompt.format())
-    response = await model_runnable.ainvoke(state, config)
+    model_runnable = wrap_model(m, background_prompt.format()).with_config(tags=["skip_stream"])
+    await model_runnable.ainvoke(state, config)
 
-    return {"messages": [AIMessage(content=response.content)]}
+    return {"messages": []}
 
 
 birthdate_extraction_prompt = SystemMessagePromptTemplate.from_template("""
@@ -127,10 +129,18 @@ async def determine_birthdate(
         )
 
     # If birthdate wasn't retrieved from store, proceed with extraction
-    m = get_model(config["configurable"].get("model", settings.DEFAULT_MODEL))
-    model_runnable = wrap_model(
-        m.with_structured_output(BirthdateExtraction), birthdate_extraction_prompt.format()
-    ).with_config(tags=["skip_stream"])
+    model_name = config["configurable"].get("model", settings.DEFAULT_MODEL)
+    m = get_model(model_name)
+    if isinstance(model_name, DeepseekModelName) and isinstance(m, ChatOpenAI):
+        structured_model = m.with_structured_output(
+            BirthdateExtraction,
+            method="function_calling",
+        )
+    else:
+        structured_model = m.with_structured_output(BirthdateExtraction)
+    model_runnable = wrap_model(structured_model, birthdate_extraction_prompt.format()).with_config(
+        tags=["skip_stream"]
+    )
     response: BirthdateExtraction = await model_runnable.ainvoke(state, config)
 
     # If no birthdate found after extraction attempt, interrupt

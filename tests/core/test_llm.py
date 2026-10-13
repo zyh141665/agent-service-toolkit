@@ -12,6 +12,7 @@ from pydantic import SecretStr
 from core.llm import get_model
 from schema.models import (
     AnthropicModelName,
+    DeepseekModelName,
     FakeModelName,
     GroqModelName,
     OllamaModelName,
@@ -83,6 +84,13 @@ def test_get_model_ollama():
 # get_model is @cache'd, so these call the uncached function directly: clearing the
 # shared cache would evict entries later tests (and app startup) rely on.
 _get_model_uncached = get_model.__wrapped__
+
+
+def test_get_model_deepseek_disables_thinking():
+    with patch("core.settings.settings.DEEPSEEK_API_KEY", SecretStr("test_key")):
+        model = _get_model_uncached(DeepseekModelName.DEEPSEEK_V4_FLASH)
+        assert isinstance(model, ChatOpenAI)
+        assert model.extra_body == {"thinking": {"type": "disabled"}}
 
 
 def test_get_model_openrouter():

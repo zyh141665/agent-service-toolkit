@@ -104,6 +104,10 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
             streaming=True,
             openai_api_base="https://api.deepseek.com",
             openai_api_key=settings.DEEPSEEK_API_KEY,
+            # ChatOpenAI does not preserve DeepSeek's non-standard
+            # reasoning_content field between tool-calling requests. Disable
+            # thinking mode so multi-step agents can safely replay messages.
+            extra_body={"thinking": {"type": "disabled"}},
         )
     if model_name in AnthropicModelName:
         if model_name == AnthropicModelName.SONNET_5:
