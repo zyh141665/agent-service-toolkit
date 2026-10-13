@@ -1,4 +1,5 @@
 import json
+import logging
 from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
@@ -33,6 +34,29 @@ def test_validation_error_includes_request_id(test_client) -> None:
     assert response.status_code == 422
     assert response_body["request_id"] == response.headers["X-Request-ID"]
     assert response_body["detail"][0]["loc"] == ["body", "message"]
+
+
+def test_unhandled_exception_returns_safe_500(test_client, caplog) -> None:
+    with (
+        patch("service.service.settings.AUTH_SECRET", None),
+        patch(
+            "service.service._get_agent_or_404",
+            side_effect=RuntimeError("database unavailable"),
+        ),
+        caplog.at_level(logging.ERROR, logger="service.service"),
+    ):
+        response = test_client.post("/invoke", json={"message": "hello"})
+
+    request_id = response.headers["X-Request-ID"]
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "detail": "Internal server error",
+        "request_id": request_id,
+    }
+    assert "database unavailable" not in response.text
+    assert request_id in caplog.text
+    assert "RuntimeError: database unavailable" in caplog.text
 
 
 @pytest.mark.parametrize(

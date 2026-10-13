@@ -148,13 +148,20 @@ async def add_request_id(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception:
+        elapsed_ms = (time.perf_counter() - started_at) * 1000
         logger.exception(
-            "http_request_failed | request_id=%s | method=%s | path=%s",
+            "http_request_failed | request_id=%s | method=%s | path=%s | "
+            "status=500 | elapsed_ms=%.2f",
             request_id,
             request.method,
             request.url.path,
+            elapsed_ms,
         )
-        raise
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error", "request_id": request_id},
+            headers={"X-Request-ID": request_id},
+        )
 
     elapsed_ms = (time.perf_counter() - started_at) * 1000
     response.headers["X-Request-ID"] = request_id
