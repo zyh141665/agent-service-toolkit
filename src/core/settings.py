@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     PORT: int = 8080
     GRACEFUL_SHUTDOWN_TIMEOUT: int = 30
     LOG_LEVEL: LogLevel = LogLevel.WARNING
+    AGENT_MAX_CONCURRENT_RUNS: int = Field(default=8, gt=0)
+    AGENT_QUEUE_TIMEOUT_SECONDS: float = Field(default=5, gt=0)
 
     AUTH_SECRET: SecretStr | None = None
 

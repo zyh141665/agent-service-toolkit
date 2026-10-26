@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import json
 import logging
@@ -58,6 +59,27 @@ from service.utils import (
 
 warnings.filterwarnings("ignore", category=LangChainBetaWarning)
 logger = logging.getLogger(__name__)
+_agent_run_semaphore = asyncio.Semaphore(settings.AGENT_MAX_CONCURRENT_RUNS)
+_agent_queue_timeout_seconds = settings.AGENT_QUEUE_TIMEOUT_SECONDS
+
+
+async def limit_agent_concurrency() -> AsyncGenerator[None, None]:
+    try:
+        await asyncio.wait_for(
+            _agent_run_semaphore.acquire(),
+            timeout=_agent_queue_timeout_seconds,
+        )
+    except TimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Agent service is busy. Please retry shortly.",
+            headers={"Retry-After": "1"},
+        ) from exc
+
+    try:
+        yield
+    finally:
+        _agent_run_semaphore.release()
 
 
 def _get_agent_or_404(agent_id: str) -> AgentGraph:
@@ -268,8 +290,12 @@ async def _handle_input(
     return kwargs, run_id
 
 
-@router.post("/{agent_id}/invoke", operation_id="invoke_with_agent_id")
-@router.post("/invoke")
+@router.post(
+    "/{agent_id}/invoke",
+    operation_id="invoke_with_agent_id",
+    dependencies=[Depends(limit_agent_concurrency)],
+)
+@router.post("/invoke", dependencies=[Depends(limit_agent_concurrency)])
 async def invoke(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> ChatMessage:
     """
     Invoke an agent with user input to retrieve a final response.
@@ -449,8 +475,14 @@ def _sse_response_example() -> dict[int | str, Any]:
     response_class=StreamingResponse,
     responses=_sse_response_example(),
     operation_id="stream_with_agent_id",
+    dependencies=[Depends(limit_agent_concurrency)],
 )
-@router.post("/stream", response_class=StreamingResponse, responses=_sse_response_example())
+@router.post(
+    "/stream",
+    response_class=StreamingResponse,
+    responses=_sse_response_example(),
+    dependencies=[Depends(limit_agent_concurrency)],
+)
 async def stream(
     user_input: StreamInput, request: Request, agent_id: str = DEFAULT_AGENT
 ) -> StreamingResponse:
