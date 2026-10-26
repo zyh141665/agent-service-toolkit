@@ -14,6 +14,13 @@ def test_client():
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def isolate_local_auth_secret():
+    """Do not let a developer's .env change unrelated HTTP and async transport tests."""
+    with patch("service.service.settings.AUTH_SECRET", None):
+        yield
+
+
 @pytest.fixture
 def mock_agent():
     """Fixture to create a mock agent that can be configured for different test scenarios."""

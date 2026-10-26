@@ -24,6 +24,18 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture
 def mock_env():
-    """Fixture to ensure environment is clean for each test."""
-    with patch.dict(os.environ, {}, clear=True):
+    """Clear app configuration while keeping OS paths needed by libraries on Windows."""
+    system_keys = {
+        "HOME",
+        "USERPROFILE",
+        "HOMEDRIVE",
+        "HOMEPATH",
+        "SYSTEMROOT",
+        "WINDIR",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+    }
+    system_env = {key: value for key, value in os.environ.items() if key.upper() in system_keys}
+    with patch.dict(os.environ, system_env, clear=True):
         yield

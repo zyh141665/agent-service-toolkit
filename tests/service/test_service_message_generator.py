@@ -51,7 +51,9 @@ async def test_three_layer_supervisor_hierarchy_agent_with_fake_model():
 
         messages = []
         async for chunk in message_generator(
-            StreamInput(message="Add 2 and 3"), agent_id="langgraph-supervisor-hierarchy-agent"
+            StreamInput(message="Add 2 and 3"),
+            agent_id="langgraph-supervisor-hierarchy-agent",
+            request_id="test-supervisor-stream",
         ):
             if chunk and chunk.strip() != "data: [DONE]":  # Skip [DONE] message
                 chat_message = json.loads(chunk.lstrip("data: "))["content"]
