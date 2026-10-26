@@ -3,6 +3,16 @@
 [![build status](https://github.com/JoshuaC215/agent-service-toolkit/actions/workflows/test.yml/badge.svg)](https://github.com/JoshuaC215/agent-service-toolkit/actions/workflows/test.yml) [![codecov](https://codecov.io/github/JoshuaC215/agent-service-toolkit/graph/badge.svg?token=5MTJSYWD05)](https://codecov.io/github/JoshuaC215/agent-service-toolkit) [![Python Version](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FJoshuaC215%2Fagent-service-toolkit%2Frefs%2Fheads%2Fmain%2Fpyproject.toml)](https://github.com/JoshuaC215/agent-service-toolkit/blob/main/pyproject.toml)
 [![GitHub License](https://img.shields.io/github/license/JoshuaC215/agent-service-toolkit)](https://github.com/JoshuaC215/agent-service-toolkit/blob/main/LICENSE) [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_red.svg)](https://agent-service-toolkit.streamlit.app/)
 
+## 本仓库的二次开发
+
+本仓库是 [JoshuaC215/agent-service-toolkit](https://github.com/JoshuaC215/agent-service-toolkit) 的个人学习与二次开发版本，保留上游项目及 MIT 许可证。以下功能是在原框架基础上的修改，不代表整个框架由本人开发。
+
+本分支的工作包括 DeepSeek 模型适配、切换 Agent 时创建新会话、SQLite 长期记忆持久化、时间查询工具、请求 ID 与错误处理、模型超时重试，以及单进程并发限制。对应实现与回归测试均保留在仓库中。
+
+**[中文运行与修改说明](docs/LEARNING_NOTES_ZH.md)**：包含 Windows 本地启动步骤、配置项、代码位置、测试命令和已知限制。下面继续保留上游 README，介绍原框架提供的完整功能。
+
+---
+
 A full toolkit for running an AI agent service built with LangGraph, FastAPI and Streamlit.
 
 It includes a [LangGraph](https://langchain-ai.github.io/langgraph/) agent, a [FastAPI](https://fastapi.tiangolo.com/) service to serve it, a client to interact with the service, and a [Streamlit](https://streamlit.io/) app that uses the client to provide a chat interface. Data structures and settings are built with [Pydantic](https://github.com/pydantic/pydantic).
